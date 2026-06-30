@@ -1,0 +1,20 @@
+module.exports = {
+    'F-':   { name: 'F-', color: '⚪' },
+    'F':    { name: 'F',  color: '⚪' },
+    'E-':   { name: 'E-', color: '🟤' },
+    'E':    { name: 'E',  color: '🟤' },
+    'D-':   { name: 'D-', color: '🟢' },
+    'D':    { name: 'D',  color: '🟢' },
+    'C-':   { name: 'C-', color: '🔵' },
+    'C':    { name: 'C',  color: '🔵' },
+    'B':    { name: 'B',  color: '🟣' },
+    'A':    { name: 'A',  color: '🔴' },
+    'A+':   { name: 'A+', color: '🔴' },
+    'S':    { name: 'S',  color: '🟠' },
+    'S+':   { name: 'S+', color: '🟡' },
+    'SS':   { name: 'SS', color: '🟥' },
+    'SS+':  { name: 'SS+', color: '🛑' },
+    'SSS':  { name: 'SSS', color: '🔥' },
+    'SSS+': { name: 'SSS+', color: '🔱' },
+    'UR':   { name: 'UR (Único)', color: '💎' }
+};
