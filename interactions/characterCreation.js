@@ -9,14 +9,11 @@ const {
     TextInputStyle 
 } = require('discord.js');
 const classes = require('../data/classes.js');
+const armFMinus = require('../itens/arm_f_minus.js');
+const { playerData, getMainPanel } = require('./playerPanel.js');
 
-// Cache temporário em memória para salvar as seleções antes de salvar no banco de dados.
-// Estrutura: userId -> { class: string|null, nickname: string }
 const creationCache = new Map();
 
-/**
- * Retorna os componentes e o embed do painel de criação baseados no estado atual do cache.
- */
 function getCreationPanel(userId, username) {
     if (!creationCache.has(userId)) {
         creationCache.set(userId, { class: null, nickname: username });
@@ -37,7 +34,6 @@ function getCreationPanel(userId, username) {
         .setColor(data.class ? '#2ecc71' : '#f1c40f')
         .setThumbnail('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200');
 
-    // Menu de Seleção de Classes - Respeitando o limite de caracteres do Discord
     const selectOptions = Object.keys(classes).map(key => ({
         label: classes[key].name,
         value: key,
@@ -52,7 +48,6 @@ function getCreationPanel(userId, username) {
             .addOptions(selectOptions)
     );
 
-    // Botões de Ação
     const buttonRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('char_open_modal_nick')
@@ -65,7 +60,7 @@ function getCreationPanel(userId, username) {
             .setLabel('Confirmar Personagem')
             .setEmoji('✅')
             .setStyle(ButtonStyle.Success)
-            .setDisabled(!data.class) // Desabilitado até escolher uma classe
+            .setDisabled(!data.class)
     );
 
     return { embeds: [embed], components: [selectRow, buttonRow], ephemeral: true };
@@ -75,13 +70,11 @@ module.exports = {
     creationCache,
     getCreationPanel,
 
-    // Executa quando o jogador clica em "Começar Jornada"
     async handleStart(interaction) {
         const panel = getCreationPanel(interaction.user.id, interaction.user.username);
         await interaction.reply(panel);
     },
 
-    // Executa quando o jogador seleciona uma classe no menu
     async handleClassSelect(interaction) {
         const userId = interaction.user.id;
         const selectedClass = interaction.values[0];
@@ -98,7 +91,6 @@ module.exports = {
         await interaction.update(panel);
     },
 
-    // Executa quando o jogador clica em "Alterar Apelido" (Abre o Modal)
     async handleOpenNickModal(interaction) {
         const userId = interaction.user.id;
         const currentData = creationCache.get(userId) || { nickname: interaction.user.username };
@@ -122,7 +114,6 @@ module.exports = {
         await interaction.showModal(modal);
     },
 
-    // Executa quando o jogador envia o Modal de Apelido
     async handleModalSubmit(interaction) {
         const userId = interaction.user.id;
         const newNickname = interaction.fields.getTextInputValue('char_nick_input');
@@ -139,7 +130,6 @@ module.exports = {
         await interaction.update(panel);
     },
 
-    // Executa ao clicar em "Confirmar Personagem"
     async handleConfirm(interaction) {
         const userId = interaction.user.id;
         const data = creationCache.get(userId);
@@ -150,19 +140,41 @@ module.exports = {
 
         const classDetails = classes[data.class];
 
-        const successEmbed = new EmbedBuilder()
-            .setTitle('🎉 Jornada Iniciada!')
-            .setDescription(
-                `O destino ouviu o seu chamado, **${data.nickname}**!\n\n` +
-                `Você escolheu trilhar o caminho como um destemido **${classDetails.name}**.\n` +
-                `Seus atributos iniciais foram aplicados com sucesso.\n\n` +
-                `*Prepare-se, pois o mundo de Além do Destino acaba de ganhar um novo herói!*`
-            )
-            .setColor('#2ecc71')
-            .setThumbnail('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200');
+        // LOGICA DE RECOMPENSA ALEATORIA DO TIER F-
+        const armasPermitidas = armFMinus.tierFMinus[data.class];
+        const chaveArmaAleatoria = armasPermitidas[Math.floor(Math.random() * armasPermitidas.length)];
+        const dadosArma = armFMinus.items[chaveArmaAleatoria];
 
-        creationCache.delete(userId); // Limpa o rascunho de criação
+        // Monta o objeto completo do item para colocar na mochila
+        const itemGanhado = {
+            id: chaveArmaAleatoria,
+            name: dadosArma.name,
+            type: dadosArma.type
+        };
 
-        await interaction.update({ embeds: [successEmbed], components: [], ephemeral: true });
+        // Salva de forma estável o jogador ativo com a sua arma inicial na mochila
+        playerData.set(userId, {
+            nickname: data.nickname,
+            class: classDetails.name,
+            level: 1,
+            xp: 0,
+            hp: classDetails.baseStats.hp,
+            mana: classDetails.baseStats.mana,
+            coins: 0,
+            inventory: [itemGanhado] // Arma inicial inclusa aqui!
+        });
+
+        // Limpa o cache de criação temporário
+        creationCache.delete(userId);
+
+        // Gera e responde diretamente com o Painel de Controle Principal atualizado
+        const mainPanel = getMainPanel(userId);
+        await interaction.update(mainPanel);
+
+        // Envia um aviso complementar avisando qual item ele ganhou
+        await interaction.followUp({
+            content: `🎁 **Recompensa de Classe:** Você recebeu uma **${itemGanhado.name}** (Tier F-) baseada na sua classe inicial! Verifique sua **Mochila**.`,
+            ephemeral: true
+        });
     }
 };

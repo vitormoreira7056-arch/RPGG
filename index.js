@@ -2,8 +2,8 @@ const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord
 const fs = require('fs');
 const path = require('path');
 const characterCreation = require('./interactions/characterCreation.js');
+const playerPanel = require('./interactions/playerPanel.js');
 
-// Inicializa o cliente do Discord com as intenções necessárias
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds,
@@ -11,16 +11,13 @@ const client = new Client({
     ] 
 });
 
-// Coleção para armazenar os comandos do bot
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 
-// Garante que a pasta de comandos exista no ambiente
 if (!fs.existsSync(commandsPath)) {
     fs.mkdirSync(commandsPath);
 }
 
-// Carrega os arquivos de comando de forma dinâmica
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 const commands = [];
 
@@ -33,7 +30,6 @@ for (const file of commandFiles) {
     }
 }
 
-// Evento executado quando o bot liga com sucesso
 client.once('ready', async () => {
     console.log(`Bot logado como ${client.user.tag}`);
     try {
@@ -48,9 +44,7 @@ client.once('ready', async () => {
     }
 });
 
-// Centralizador de Interações (Botões, Menus de Seleção e Modais)
 client.on('interactionCreate', async interaction => {
-    // 1. Gerenciamento de Comandos de Barra (/instalar)
     if (interaction.isChatInputCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
         if (!command) return;
@@ -68,9 +62,9 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // 2. Gerenciamento de Cliques em Botões
     if (interaction.isButton()) {
         switch (interaction.customId) {
+            // Cliques da Criação de Personagem
             case 'game_start':
                 await characterCreation.handleStart(interaction);
                 break;
@@ -80,13 +74,26 @@ client.on('interactionCreate', async interaction => {
             case 'char_confirm_creation':
                 await characterCreation.handleConfirm(interaction);
                 break;
+            
+            // Cliques do Painel Principal e Mochila
+            case 'main_inventory':
+                await playerPanel.handleInventory(interaction);
+                break;
+            case 'main_stats':
+                await playerPanel.handleStats(interaction);
+                break;
+            case 'main_equipment':
+                await playerPanel.handleEquipment(interaction);
+                break;
+            case 'main_back_to_panel':
+                await playerPanel.handleBack(interaction);
+                break;
             default:
                 break;
         }
         return;
     }
 
-    // 3. Gerenciamento de Seleção nos Menus (Caixas de escolha)
     if (interaction.isStringSelectMenu()) {
         if (interaction.customId === 'char_select_class') {
             await characterCreation.handleClassSelect(interaction);
@@ -94,7 +101,6 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // 4. Gerenciamento de Envio de Modais (Formulários de texto)
     if (interaction.isModalSubmit()) {
         if (interaction.customId === 'char_nick_modal') {
             await characterCreation.handleModalSubmit(interaction);
@@ -103,5 +109,4 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Autentica o bot usando a variável de ambiente salva no Replit Secrets
 client.login(process.env.DISCORD_TOKEN);
