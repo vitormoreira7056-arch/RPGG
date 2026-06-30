@@ -47,19 +47,7 @@ module.exports = {
                     .setCustomId('game_start')
                     .setLabel('Começar Jornada')
                     .setEmoji('🛡️')
-                    .setStyle(ButtonStyle.Success),
-                
-                new ButtonBuilder()
-                    .setCustomId('game_profile')
-                    .setLabel('Meu Perfil / Inventário')
-                    .setEmoji('🎒')
-                    .setStyle(ButtonStyle.Primary),
-
-                new ButtonBuilder()
-                    .setCustomId('game_market')
-                    .setLabel('Mercado Geral')
-                    .setEmoji('⚖️')
-                    .setStyle(ButtonStyle.Secondary)
+                    .setStyle(ButtonStyle.Success)
             );
 
             await gameChannel.send({ embeds: [introEmbed], components: [row] });
