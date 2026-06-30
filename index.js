@@ -88,8 +88,8 @@ client.on('interactionCreate', async interaction => {
 
     // 3. Gerenciamento de Seleção nos Menus (Caixas de escolha)
     if (interaction.isStringSelectMenu()) {
-        if (interaction.customId === 'char_select_race') {
-            await characterCreation.handleRaceSelect(interaction);
+        if (interaction.customId === 'char_select_class') {
+            await characterCreation.handleClassSelect(interaction);
         }
         return;
     }
