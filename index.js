@@ -1,12 +1,9 @@
+
+```javascript:index.js
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-
-const token = process.env.DISCORD_TOKEN;
-if (!token) {
-    console.error('ERRO: A variável de ambiente DISCORD_TOKEN não está definida.');
-    process.exit(1);
-}
+const characterCreation = require('./interactions/characterCreation.js');
 
 const client = new Client({ 
     intents: [
@@ -37,71 +34,70 @@ for (const file of commandFiles) {
 client.once('ready', async () => {
     console.log(`Bot logado como ${client.user.tag}`);
     try {
-        const rest = new REST({ version: '10' }).setToken(token);
+        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
         await rest.put(
             Routes.applicationCommands(client.user.id),
             { body: commands },
         );
-        console.log('Comandos slash registrados com sucesso.');
+        console.log('Comandos (/ slash commands) registrados com sucesso no Discord.');
     } catch (error) {
         console.error('Erro ao registrar comandos:', error);
     }
 });
 
+// Centralizador de Interações Modernas (Botões, Menus e Modais)
 client.on('interactionCreate', async interaction => {
+    // 1. Slash Commands (/instalar)
     if (interaction.isChatInputCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
         if (!command) return;
-
         try {
             await command.execute(interaction);
         } catch (error) {
-            console.error(`Erro no comando /${interaction.commandName}:`, error);
-            const reply = { content: 'Houve um erro ao executar este comando!', ephemeral: true };
+            console.error(error);
+            const errMsg = { content: 'Houve um erro ao executar este comando!', ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(reply);
+                await interaction.followUp(errMsg);
             } else {
-                await interaction.reply(reply);
+                await interaction.reply(errMsg);
             }
         }
         return;
     }
 
+    // 2. Interações de Botões (Button)
     if (interaction.isButton()) {
-        const { customId } = interaction;
-        console.log(`Botão clicado: ${customId} por ${interaction.user.tag}`);
+        switch (interaction.customId) {
+            case 'game_start':
+                await characterCreation.handleStart(interaction);
+                break;
+            case 'char_open_modal_nick':
+                await characterCreation.handleOpenNickModal(interaction);
+                break;
+            case 'char_confirm_creation':
+                await characterCreation.handleConfirm(interaction);
+                break;
+            default:
+                break;
+        }
+        return;
+    }
 
-        try {
-            if (customId === 'game_start') {
-                await interaction.reply({
-                    content: '🛡️ **Bem-vindo, aventureiro!**\nUse `/criar-personagem` para começar sua jornada.',
-                    ephemeral: true
-                });
+    // 3. Interações de Menus de Seleção (StringSelectMenu)
+    if (interaction.isStringSelectMenu()) {
+        if (interaction.customId === 'char_select_race') {
+            await characterCreation.handleRaceSelect(interaction);
+        }
+        return;
+    }
 
-            } else if (customId === 'game_profile') {
-                await interaction.reply({
-                    content: '🎒 **Perfil / Inventário**\nFuncionalidade em desenvolvimento.',
-                    ephemeral: true
-                });
-
-            } else if (customId === 'game_market') {
-                await interaction.reply({
-                    content: '⚖️ **Mercado Geral**\nFuncionalidade em desenvolvimento.',
-                    ephemeral: true
-                });
-
-            } else {
-                console.warn(`Botão não reconhecido: ${customId}`);
-                await interaction.reply({
-                    content: '❓ Ação não reconhecida.',
-                    ephemeral: true
-                });
-            }
-        } catch (error) {
-            console.error(`Erro ao processar botão ${customId}:`, error);
+    // 4. Envio de Formulários (ModalSubmit)
+    if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'char_nick_modal') {
+            await characterCreation.handleModalSubmit(interaction);
         }
         return;
     }
 });
 
-client.login(token);
+client.login(process.env.DISCORD_TOKEN);
